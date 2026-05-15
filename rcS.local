@@ -2,6 +2,8 @@
 
 mkdir /var/log/classic/battery
 mkdir /var/log/classic/charger
+mkdir /var/log/classic/charger2
 
 ln -s /data/classic/battery/service /service/classic-battery
 ln -s /data/classic/charger/service /service/classic-charger
+ln -s /data/classic/charger2/service /service/classic-charger2

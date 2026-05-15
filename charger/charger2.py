@@ -26,7 +26,6 @@ from logger import setup_logging
 
 import config
 
-
 def twos_complement(uValue, iBits):
     if (uValue & (1 << (iBits - 1))) != 0:     # If sign bit is set
         uValue = uValue - (1 << iBits)          # then compute negative value
@@ -44,9 +43,9 @@ class readMidnite():
 
         logger.info('Initialising Midnite thread: IP=%s, Freq=%d' % (self.sIP, self.iFrequency))
         self.service = VeDbusService(servicename='com.victronenergy.solarcharger.midnite', register=False)
-        self.service.add_path('/DeviceInstance',      0)
+        self.service.add_path('/DeviceInstance',      1)
         self.service.add_path('/ProductName',         'Midnite Classic Solar Charger')
-        self.service.add_path('/Mgmt/ProcessName',    'charger.py')
+        self.service.add_path('/Mgmt/ProcessName',    'charger2.py')
         self.service.add_path('/Mgmt/ProcessVersion', config.VERSION)
         self.service.add_path('/Mgmt/Connection',     'dbus')
         self.service.add_path('/FirmwareVersion',     config.VERSION)
@@ -55,8 +54,8 @@ class readMidnite():
         self.service.add_path('/Pv/V',                None, writeable=True, gettextcallback=lambda a, x: "{:.0f}V".format(x))
         self.service.add_path('/Pv/I',                None, writeable=True, gettextcallback=lambda a, x: "{:.1f}A".format(x))
         self.service.add_path('/Yield/Power',         None, writeable=True, gettextcallback=lambda a, x: "{:.0f}W".format(x))
-#        self.service.add_path('/Dc/0/Voltage',        None, writeable=True, gettextcallback=lambda a, x: "{:.1f}V".format(x))
-#        self.service.add_path('/Dc/0/Current',        None, writeable=True, gettextcallback=lambda a, x: "{:.1f}A".format(x))
+        #self.service.add_path('/Dc/0/Voltage',        None, writeable=True, gettextcallback=lambda a, x: "{:.1f}V".format(x))
+        #self.service.add_path('/Dc/0/Current',        None, writeable=True, gettextcallback=lambda a, x: "{:.1f}A".format(x))
         self.service.add_path('/Connected',           1)
         self.service.register()
         logger.info('Initialised Midnite thread: IP=%s, Freq=%d' % (self.sIP, self.iFrequency))
@@ -87,7 +86,7 @@ class readMidnite():
                 PCB_T         = float(HR41.registers[33])/10
                 CHARGE_STATE  = (HR41.registers[19] & 0xFF00) >> 8
                 MIDNITE_STATE = (HR41.registers[19] & 0x00FF)
-                SHUNT_A       = float(twos_complement(HR43.registers[70], 16))/10
+                #SHUNT_A       = float(twos_complement(HR43.registers[70], 16))/10
 
                 #logger.info ('Updating: State=%d, V=%f, A=%f, T=%f, CV=%f, CA=%f' % (config.MIDNITE_VICTRON[CHARGE_STATE], PV_V, PV_A, BATT_T, BATT_V, BATT_A))
                 self.service['/State']        = config.MIDNITE_VICTRON[CHARGE_STATE]
@@ -120,7 +119,7 @@ class readMidnite():
 
 logger = setup_logging(debug=False)
 DBusGMainLoop(set_as_default=True)
-t = readMidnite(config.MIDNITE_IP, config.MIDNITE_INTERVAL)
+t = readMidnite(config.MIDNITE2_IP, config.MIDNITE2_INTERVAL)
 t.run()
 
 logger.info('Connected to dbus, and switching over to GLib.MainLoop() (= event based)')
