@@ -8,11 +8,12 @@
 # License:	GNU General Public License v3.0
 
 VERSION				= "v2.0"
+MIDNITE_INTERVAL    = 10 # seconds
 
-MIDNITE_IP          = "192.168.0.225"
-MIDNITE_INTERVAL    = 10
+MIDNITE1_IP         = "192.168.0.225"
+MIDNITE1_UNIT       = 10
 MIDNITE2_IP         = "192.168.0.226"
-MIDNITE2_INTERVAL   = 11
+MIDNITE2_UNIT       = 11
 
 MIDNITE_VICTRON	=  
    {
@@ -24,7 +25,3 @@ MIDNITE_VICTRON	=
 	   7:   7,   # Midnite Equalize:    Victron Equalize
 	   10:  3,   # HyperVOC:            Victron Bulk - I guess
    }
-
-MQTT_ENABLED = False
-MQTT_IP = "192.168.1.101"
-MQTT_PREFIX	= "classic"

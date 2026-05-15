@@ -15,7 +15,6 @@ import sys
 import os
 import time
 from pymodbus.client.sync import ModbusTcpClient as ModbusClient
-import paho.mqtt.client
 
 # VenusOS packages
 sys.path.insert(1, os.path.join(os.path.dirname(__file__), '/opt/victronenergy/dbus-systemcalc-py/ext/velib_python'))
@@ -36,48 +35,38 @@ def twos_complement(uValue, iBits):
 #end twos_complement
 
 
-# def updateMQTT(sBroker, sTopic, SOC, BATT_V, SHUNT_A, BATT_T):
-#     mqttClient = paho.mqtt.client.Client()
-#     if (mqttClient.connect(sBroker) == 0):
-#         try:
-#             mqttClient.publish(sTopic + 'Voltage',     '{:0.2f}'.format(BATT_V),           retain=True)
-#             time.sleep(0.1)
-#             mqttClient.publish(sTopic + 'Current',     '{:0.2f}'.format(SHUNT_A),          retain=True)
-#             time.sleep(0.1)
-#             mqttClient.publish(sTopic + 'Power',       '{:0.2f}'.format(BATT_V * SHUNT_A), retain=True)
-#             time.sleep(0.1)
-#             mqttClient.publish(sTopic + 'Temperature', '{:0.1f}'.format(BATT_T),           retain=True)
-#             time.sleep(0.1)
-#             mqttClient.publish(sTopic + 'SOC',         '{:d}'.format(SOC),                 retain=True)
-#         except Exception as e:
-#             log('updateMQTT[{:s}]: {:s}'.format(sTopic, repr(e)))
-#         finally:
-#             mqttClient.disconnect()
-        #end try
-    #end if
-#end updateMQTT
-
-
 class readMidnite():
 
-    def __init__(self, sIP, iFrequency, sMQTT, sPrefix):
+    def __init__(self, sIP, iFrequency, iUnit=10):
 
         self.sIP        = sIP
         self.iFrequency = iFrequency
+        self.iUnit      = iUnit
         self.classic    = ModbusClient(self.sIP, port=502)
-        #self.sMQTT      = sMQTT
-        #self.sTopic     = sPrefix + '/'
         self.terminated = False
 
         logger.info('Initialising Midnite thread: IP=%s, Freq=%d' % (self.sIP, self.iFrequency))
-        self.service = VeDbusService(servicename='com.victronenergy.battery.midnite', register=False)
-        self.service.add_path('/DeviceInstance',      0)
-        self.service.add_path('/ProductName',         'Midnite Classic Battery Monitor')
-        self.service.add_path('/Mgmt/ProcessName',    'battery.py')
+
+        # 1. Register D-Bus service Name
+        service_name = f'com.victronenergy.battery.midnite_{iUnit}'
+        self.service = VeDbusService(service_name)
+        #self.service = VeDbusService(servicename='com.victronenergy.battery.midnite', register=False)
+
+        #2. Add mandantory paths
+        self.service.add_path('/Mgmt/ProcessName',    'dbus-midnite-battery')
         self.service.add_path('/Mgmt/ProcessVersion', config.VERSION)
-        self.service.add_path('/Mgmt/Connection',     'dbus')
-        self.service.add_path('/FirmwareVersion',     config.VERSION)
-        self.service.add_path('/HardwareVersion',     config.VERSION)
+        self.service.add_path('/Mgmt/Connection',     'Midnite Classic')
+
+        #3 Add Product Name Path
+        self.service.add_path('/ProductName',         'Midnite Classic Battery Monitor')
+
+        #4 Add Custom Device Instance & product ID (Optionhal but reccommended)
+        self.service.add_path('/DeviceInstance',      0)
+        self.service.add_path('/ProductId', 0xFFF0)
+
+        #5 Add your specific data paths
+        #self.service.add_path('/FirmwareVersion',     config.VERSION)
+        #self.service.add_path('/HardwareVersion',     config.VERSION)
         self.service.add_path('/Soc',                 None, writeable=True, gettextcallback=lambda a, x: "{:d}%".format(x))
         self.service.add_path('/Dc/0/Voltage',        None, writeable=True, gettextcallback=lambda a, x: "{:.2f}V".format(x))
         self.service.add_path('/Dc/0/Current',        None, writeable=True, gettextcallback=lambda a, x: "{:.2f}A".format(x))
@@ -91,9 +80,9 @@ class readMidnite():
     def readModbus(self):
         try:
             if self.classic.connect():
-                HR41 = self.classic.read_holding_registers(4100, 100)
-                HR42 = self.classic.read_holding_registers(4200, 100)
-                HR43 = self.classic.read_holding_registers(4300, 100)
+                HR41 = self.classic.read_holding_registers(4100, 100, unit=self.iUnit)
+                HR42 = self.classic.read_holding_registers(4200, 100, unit=self.iUnit)
+                HR43 = self.classic.read_holding_registers(4300, 100, unit=self.iUnit)
                 self.classic.close()
                 self.service['/Connected'] = 1
 
@@ -103,17 +92,11 @@ class readMidnite():
                 UNIT_SW_DATE_D = (HR41.registers[2] & 0x00FF)
 
                 SOC           = HR43.registers[72]
-                #PV_V          = float(HR41.registers[15])/10
-                #PV_A          = float(HR41.registers[20])/10
                 BATT_V        = float(HR41.registers[14])/10
                 BATT_A        = float(HR41.registers[16])/10
                 BATT_P        = HR41.registers[18]
                 BATT_T        = float(HR41.registers[31])/10
-                #FET_T         = float(HR41.registers[32])/10
-                #PCB_T         = float(HR41.registers[33])/10
                 SHUNT_A       = float(twos_complement(HR43.registers[70], 16))/10
-                #CHARGE_STATE  = (HR41.registers[19] & 0xFF00) >> 8
-                #MIDNITE_STATE = (HR41.registers[19] & 0x00FF)
 
                 #logger.info ('Updating: SOC=%d, V=%f, A=%f, P=%f, T=%f' % (SOC, BATT_V, SHUNT_A, (BATT_V*SHUNT_A), BATT_T))
                 self.service['/Soc']              = SOC
@@ -121,7 +104,6 @@ class readMidnite():
                 self.service['/Dc/0/Current']     = SHUNT_A
                 self.service['/Dc/0/Power']       = round(BATT_V * SHUNT_A)
                 self.service['/Dc/0/Temperature'] = BATT_T
-                if config.MQTT_ENABLED: updateMQTT(self.sMQTT, self.sTopic, SOC, BATT_V, SHUNT_A, BATT_T)
             else:
                 logger.info('unable to connect to %s' % self.sIP)
                 self.service['/Connected'] = 0
@@ -151,7 +133,7 @@ logger = setup_logging(debug=False)
 # Have a mainloop, so we can send/receive asynchronous calls to and from dbus
 DBusGMainLoop(set_as_default=True)
 
-t = readMidnite(config.MIDNITE_IP, config.MIDNITE_INTERVAL, config.MQTT_IP, config.MQTT_PREFIX)
+t = readMidnite(config.MIDNITE1_IP, config.MIDNITE_INTERVAL, config.MIDNITE1_UNIT)
 t.run()
 logger.info('Connected to dbus, and switching over to gobject.MainLoop() (= event based)')
 mainloop = GLib.MainLoop()
