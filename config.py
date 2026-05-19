@@ -10,16 +10,6 @@
 VERSION				= "v2.0"
 MIDNITE_INTERVAL    = 10 # seconds
 
-#Shunt connected to MIDNITE1, so it reports both battery and charger1 info
-MIDNITE1_IP         = "192.168.0.225"
-MIDNITE1_PORT       = 502
-MIDNITE1_UNIT       = 10
-
-#Only reports it's own PV data
-MIDNITE2_IP         = "192.168.0.226"
-MIDNITE2_PORT       = 502
-MIDNITE2_UNIT       = 11
-
 MIDNITE_VICTRON	=  
    {
 	   0:   0,   # Midnite Resting:     Victron Off

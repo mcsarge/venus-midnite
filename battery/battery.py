@@ -37,12 +37,13 @@ def twos_complement(uValue, iBits):
 
 class readMidnite():
 
-    def __init__(self, sIP, iFrequency, iPort=502, iUnit=10):
+    def __init__(self, sIP, iFrequency, iPort=502, iUnit=10, iDeviceInstance=0):
 
-        self.sIP        = sIP
-        self.iFrequency = iFrequency
-        self.iPort      = iPort
-        self.iUnit      = iUnit
+        self.sIP             = sIP
+        self.iFrequency      = iFrequency
+        self.iPort           = iPort
+        self.iUnit           = iUnit
+        self.iDeviceInstance = iDeviceInstance
         self.classic    = ModbusClient(self.sIP, port=self.iPort)
         self.terminated = False
 
@@ -62,7 +63,7 @@ class readMidnite():
         self.service.add_path('/ProductName',         'Midnite Classic Battery Monitor')
 
         #4 Add Custom Device Instance & product ID (Optionhal but reccommended)
-        self.service.add_path('/DeviceInstance',      0)
+        self.service.add_path('/DeviceInstance',      self.iDeviceInstance)
         self.service.add_path('/ProductId', 0xFFF0)
 
         #5 Add your specific data paths
@@ -129,12 +130,18 @@ class readMidnite():
 
 #end readMidnite
 
-logger = setup_logging(debug=False)
+parser = argparse.ArgumentParser(description='Midnite Classic battery monitor driver')
+parser.add_argument('--ip',              required=True,         help='Classic IP address')
+parser.add_argument('--port',            type=int, default=502, help='Modbus TCP port')
+parser.add_argument('--unit',            type=int, required=True, help='Modbus unit/slave ID')
+parser.add_argument('--device-instance', type=int, default=0,   help='VenusOS device instance')
+parser.add_argument('--interval',        type=int, default=config.MIDNITE_INTERVAL, help='Poll interval in seconds')
+args = parser.parse_args()
 
-# Have a mainloop, so we can send/receive asynchronous calls to and from dbus
+logger = setup_logging(debug=False)
 DBusGMainLoop(set_as_default=True)
 
-t = readMidnite(config.MIDNITE1_IP, config.MIDNITE_INTERVAL, config.MIDNITE1_PORT, config.MIDNITE1_UNIT)
+t = readMidnite(args.ip, args.interval, args.port, args.unit, args.device_instance)
 t.run()
 logger.info('Connected to dbus, and switching over to gobject.MainLoop() (= event based)')
 mainloop = GLib.MainLoop()
