@@ -69,7 +69,6 @@ class readMidnite():
         self.service.add_path('/Pv/I',                None, writeable=True, gettextcallback=lambda a, x: "{:.1f}A".format(x))
         self.service.add_path('/Yield/Power',         None, writeable=True, gettextcallback=lambda a, x: "{:.0f}W".format(x))
         self.service.add_path('/Connected',           1)
-        self.service.add_path('/Serial',               None, writeable=True)
         self.service.register()
         logger.info('Initialised Midnite thread: IP=%s, Freq=%d' % (self.sIP, self.iFrequency))
 
@@ -103,7 +102,6 @@ class readMidnite():
                 self.service['/Pv/I']         = PV_A
                 self.service['/Yield/Power']  = round(PV_V * PV_A)
                 self.service['/Pv/I']         = PV_A
-                self.service['/Serial']       = UNIT_ID
             else:
                 logger.info('unable to connect to %s' % self.sIP)
                 self.service['/Connected'] = 0

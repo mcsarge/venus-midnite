@@ -104,7 +104,7 @@ class readMidnite():
                 self.service['/Dc/0/Voltage']     = BATT_V
                 self.service['/Dc/0/Current']     = SHUNT_A
                 self.service['/Dc/0/Power']       = round(BATT_V * SHUNT_A)
-                self.service['/Dc/0/Temperature'] = BATT_T
+                self.service['/Dc/0/Temperature'] = BATT_T                
             else:
                 logger.info('unable to connect to %s' % self.sIP)
                 self.service['/Connected'] = 0
