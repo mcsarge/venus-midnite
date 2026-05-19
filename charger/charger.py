@@ -2,9 +2,9 @@
 
 # Name:     charger.py
 # Purpose:  Present a solar charger to VenusOS using values read from a Midnite Classic with a Whizbang Jr
-# Date:     12-12-2024
-# Version:  2.0
-# Author:   Jan Bakuwel / YSolar NZ Ltd
+# Date:     5-19-2026
+# Version:  2.1
+# Author:   Jan Bakuwel / YSolar NZ Ltd - Matt Sargent / Self
 # License:  GNU General Public License v3.0
 
 from dbus.mainloop.glib import DBusGMainLoop
@@ -18,9 +18,11 @@ from pymodbus.client.sync import ModbusTcpClient as ModbusClient
 
 # VenusOS packages
 sys.path.insert(1, os.path.join(os.path.dirname(__file__), '/opt/victronenergy/dbus-systemcalc-py/ext/velib_python'))
-# config.py lives in the parent directory; add it to sys.path since this
+
+# Since config.py lives in the parent directory; add it to sys.path because this
 # script is launched via an absolute path and sys.path[0] is set to charger/
 sys.path.insert(1, os.path.join(os.path.dirname(__file__), '..'))
+
 from vedbus import VeDbusService
 from logger import setup_logging
 
@@ -36,11 +38,12 @@ def twos_complement(uValue, iBits):
 
 class readMidnite():
 
-    def __init__(self, sIP, iFrequency, iUnit=10):
+    def __init__(self, sIP, iFrequency, iPort=502, iUnit=10):
         self.sIP        = sIP
         self.iFrequency = iFrequency
         self.iUnit      = iUnit
-        self.classic    = ModbusClient(self.sIP, port=502)
+        self.iPort      = iPort
+        self.classic    = ModbusClient(self.sIP, port=self.iPort)
         self.terminated = False
 
         logger.info('Initialising Midnite thread: IP=%s, Freq=%d' % (self.sIP, self.iFrequency))
@@ -67,6 +70,7 @@ class readMidnite():
         self.service.add_path('/Pv/I',                None, writeable=True, gettextcallback=lambda a, x: "{:.1f}A".format(x))
         self.service.add_path('/Yield/Power',         None, writeable=True, gettextcallback=lambda a, x: "{:.0f}W".format(x))
         self.service.add_path('/Connected',           1)
+        self.service.add_path('/Serial',               None, writeable=True)
         self.service.register()
         logger.info('Initialised Midnite thread: IP=%s, Freq=%d' % (self.sIP, self.iFrequency))
 
@@ -99,6 +103,8 @@ class readMidnite():
                 self.service['/Pv/V']         = PV_V
                 self.service['/Pv/I']         = PV_A
                 self.service['/Yield/Power']  = round(PV_V * PV_A)
+                self.service['/Pv/I']         = PV_A
+                self.service['/Serial']       = UNIT_ID
             else:
                 logger.info('unable to connect to %s' % self.sIP)
                 self.service['/Connected'] = 0
@@ -123,7 +129,7 @@ class readMidnite():
 
 logger = setup_logging(debug=False)
 DBusGMainLoop(set_as_default=True)
-t = readMidnite(config.MIDNITE1_IP, config.MIDNITE_INTERVAL, config.MIDNITE1_UNIT)
+t = readMidnite(config.MIDNITE1_IP, config.MIDNITE_INTERVAL, config.MIDNITE1_PORT, config.MIDNITE1_UNIT)
 t.run()
 
 logger.info('Connected to dbus, and switching over to GLib.MainLoop() (= event based)')

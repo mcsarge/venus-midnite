@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-# Name: 		battery.py
-# Purpose:	Present a battery monitor to VenusOS using values read from a Midnite Classic with a Whizbang Jr
-# Date:		12-12-2024
-# Version:	2.0
-# Author:	Jan Bakuwel / YSolar NZ Ltd
-# License:	GNU General Public License v3.0
+# Name:     battery.py
+# Purpose:  Present a battery monitor to VenusOS using values read from a Midnite Classic with a Whizbang Jr
+# Date:     5-19-2026
+# Version:  2.1
+# Author:   Jan Bakuwel / YSolar NZ Ltd - Matt Sargent / Self
+# License:  GNU General Public License v3.0
 
 from dbus.mainloop.glib import DBusGMainLoop
 from gi.repository import GLib
@@ -18,10 +18,11 @@ from pymodbus.client.sync import ModbusTcpClient as ModbusClient
 
 # VenusOS packages
 sys.path.insert(1, os.path.join(os.path.dirname(__file__), '/opt/victronenergy/dbus-systemcalc-py/ext/velib_python'))
-#sys.path.insert(1, os.path.join(os.path.dirname(__file__), '/opt/victronenergy/dbus-mqtt'))
-# config.py lives in the parent directory; add it to sys.path since this
+
+# Since config.py lives in the parent directory; add it to sys.path because this
 # script is launched via an absolute path and sys.path[0] is set to battery/
 sys.path.insert(1, os.path.join(os.path.dirname(__file__), '..'))
+
 from vedbus import VeDbusService
 from logger import setup_logging
 
@@ -34,15 +35,15 @@ def twos_complement(uValue, iBits):
     return uValue
 #end twos_complement
 
-
 class readMidnite():
 
-    def __init__(self, sIP, iFrequency, iUnit=10):
+    def __init__(self, sIP, iFrequency, iPort=502, iUnit=10):
 
         self.sIP        = sIP
         self.iFrequency = iFrequency
+        self.iPort      = iPort
         self.iUnit      = iUnit
-        self.classic    = ModbusClient(self.sIP, port=502)
+        self.classic    = ModbusClient(self.sIP, port=self.iPort)
         self.terminated = False
 
         logger.info('Initialising Midnite thread: IP=%s, Freq=%d' % (self.sIP, self.iFrequency))
@@ -133,7 +134,7 @@ logger = setup_logging(debug=False)
 # Have a mainloop, so we can send/receive asynchronous calls to and from dbus
 DBusGMainLoop(set_as_default=True)
 
-t = readMidnite(config.MIDNITE1_IP, config.MIDNITE_INTERVAL, config.MIDNITE1_UNIT)
+t = readMidnite(config.MIDNITE1_IP, config.MIDNITE_INTERVAL, config.MIDNITE1_PORT, config.MIDNITE1_UNIT)
 t.run()
 logger.info('Connected to dbus, and switching over to gobject.MainLoop() (= event based)')
 mainloop = GLib.MainLoop()
